@@ -12,5 +12,33 @@
     "email": "nam@example.com",
     "password": "test",
     "role": "user"
+  },
+  {
+    "id": 3,
+    "name": "Hong Doe",
+    "email": "hong@example.com",
+    "password": "test",
+    "role": "user"
+  },
+  {
+    "id": 4,
+    "name": "Yon Doe",
+    "email": "yon@example.com",
+    "password": "test",
+    "role": "user"
+  },
+  {
+    "id": 5,
+    "name": "Go Doe",
+    "email": "go@example.com",
+    "password": "test",
+    "role": "user"
+  },
+  {
+    "id": 7,
+    "name": "Shi Doe",
+    "email": "shi@example.com",
+    "password": "test",
+    "role": "user"
   }
 ]

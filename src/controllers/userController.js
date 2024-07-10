@@ -4,49 +4,72 @@ const fs = require('fs');
 const path = require('path');
 const filePath = path.join(__dirname, './../data/users.json');
 
-exports.getAllUsers = function(req, res){
-    res.status(200).json(users);
+exports.getAllUsers = function (req, res) {
+    let userArr = [];
+    try {
+        const data = fs.readFileSync(filePath, 'utf-8');
+        if (data) {
+            userArr = JSON.parse(data);
+        }
+    } catch (err) {
+        res.status(500).json({ error: 'Internal server error' });
+        return;
+    }
+    res.status(200).json(userArr);
 }
 
-exports.createUser = function(req, res){
+exports.createUser = function (req, res) {
     const newUser = req.body;
     let usersArr = [];
 
-    try{
-        const data = fs.readFileSync(filePath,'utf-8');
-        console.log('Data:', data);
-        if(data){
+    try {
+        const data = fs.readFileSync(filePath, 'utf-8');
+        if (data) {
             usersArr = JSON.parse(data);
         }
-    }catch(err){
-        console.error('Error reading file:', err);
-        res.status(500).json({error:'Internal server error'});
+    } catch (err) {
+        res.status(500).json({ error: 'Internal server error' });
         return;
     }
     usersArr.push(newUser);
     try {
         const newUserJson = JSON.stringify(usersArr, null, 2);
-        console.log('New user:', newUserJson);
         fs.writeFileSync(filePath, newUserJson, 'utf-8');
         res.status(201).json(newUser);
     } catch (err) {
-        console.error('Error writing file:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 }
 
-exports.getUserById = function(req, res){
+exports.getUserById = function (req, res) {
     const id = Number(req.params.id);
-    const user = users.find(user => user.id === id);
-    console.log('User:', user);
-    if(user){
-        res.status(200).json(user);
-    }else{
-        res.status(404).json({error:'User not found'});
+    if (isNaN(id)) {
+        res.status(400).json({ error: 'Invalid ID' });
+        return;
+    }
+
+    let usersArr = [];
+    try {
+        const data = fs.readFileSync(filePath, 'utf-8');
+        if (data) {
+            usersArr = JSON.parse(data);
+        }
+    } catch (err) {
+        res.status(500).json({ error: 'Internal server error' });
+        return;
+    }
+
+    const userIndex = usersArr.findIndex(user => user.id === id);
+
+    if (userIndex !== -1) {
+        const userResult = usersArr[userIndex];
+        res.status(200).json(userResult);
+    } else {
+        res.status(404).json({ error: 'User not found' });
     }
 }
 
-exports.updateUser = function(req, res){
+exports.updateUser = function (req, res) {
     const id = Number(req.params.id);
 
     // Read the users from the file
@@ -55,36 +78,32 @@ exports.updateUser = function(req, res){
         const data = fs.readFileSync(filePath, 'utf-8');
         usersData = JSON.parse(data);
     } catch (err) {
-        console.error('Error reading file:', err);
         res.status(500).json({ error: 'Internal server error' });
         return;
     }
 
-    const user = usersData.find(user => user.id === id);
-    
-    console.log('User:', user);
-    if(!user){
-        res.status(404).json({error:'User not found'});
+    const userIndex = usersData.findIndex(user => user.id === id);
+
+    if (userIndex === -1) {
+        res.status(404).json({ error: 'User not found' });
         return;
     }
 
-    const LeftUsers = usersData.filter(user => user.id !== id);
-    console.log('Left users:', LeftUsers);
-    try{
-        const LeftUsersJson = JSON.stringify(LeftUsers, null, 2);
-        console.log('Left users:', LeftUsersJson);
-        fs.writeFileSync(filePath, LeftUsersJson, 'utf-8');
-        res.status(204).end();
-    }catch(err){
-        console.error('Error writing file:', err);
-        res.status(500).json({error:'Internal server error'});
+    // Update the user data
+    usersData[userIndex] = { ...usersData[userIndex], ...req.body };
+
+    try {
+        fs.writeFileSync(filePath, JSON.stringify(usersData, null, 2), 'utf-8');
+        res.status(200).json({ message: 'User updated successfully' });
+    } catch (err) {
+        res.status(500).json({ error: 'Internal server error' });
     }
 }
 
-exports.deleteUser = function(req, res){
+exports.deleteUser = function (req, res) {
     const id = Number(req.params.id);
-    if(isNaN(id)){
-        res.status(400).json({error:'Invalid ID'});
+    if (isNaN(id)) {
+        res.status(400).json({ error: 'Invalid ID' });
         return;
     }
 
@@ -94,7 +113,6 @@ exports.deleteUser = function(req, res){
         const data = fs.readFileSync(filePath, 'utf-8');
         usersData = JSON.parse(data);
     } catch (err) {
-        console.error('Error reading file:', err);
         res.status(500).json({ error: 'Internal server error' });
         return;
     }
@@ -112,7 +130,6 @@ exports.deleteUser = function(req, res){
         fs.writeFileSync(filePath, updatedUsersJson, 'utf-8');
         return res.status(204).end();
     } catch (err) {
-        console.error('Error writing file:', err);
         return res.status(500).json({ error: 'Internal server error' });
     }
 }
