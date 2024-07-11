@@ -128,7 +128,7 @@ exports.deleteUser = function (req, res) {
     try {
         const updatedUsersJson = JSON.stringify(usersData, null, 2);
         fs.writeFileSync(filePath, updatedUsersJson, 'utf-8');
-        return res.status(204).end();
+        return res.status(200).json({ message: 'User deleted successfully' });
     } catch (err) {
         return res.status(500).json({ error: 'Internal server error' });
     }
