@@ -29,7 +29,6 @@ describe('User Routes with Mocks', () => {
         const response = await request(app).post('/users').send(newUser);
         expect(response.statusCode).toBe(201);
         expect(response.body).toEqual({ id: 1, ...newUser });
-        console.log(response.body)
         expect(userController.createUser).toHaveBeenCalled();
         // expect(userController.createUser).toHaveBeenCalledWith(expect.anything(), expect.anything());
     });

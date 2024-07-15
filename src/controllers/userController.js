@@ -1,5 +1,3 @@
-const e = require('express');
-const users = require('./../data/users.json');
 const fs = require('fs');
 const path = require('path');
 const filePath = path.join(__dirname, './../data/users.json');

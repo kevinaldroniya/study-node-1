@@ -1,6 +1,5 @@
 const fs = require('fs');
-const userController = require('./../controllers/userController.js');
-const { isTypedArray } = require('util/types');
+const userController = require('../../controllers/userController.js');
 
 //mock fs module
 jest.mock('fs');
