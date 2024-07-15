@@ -1,12 +1,19 @@
 const fs = require('fs');
 const authController = require('./../../controllers/authController.v1');
+const jwt = require('jsonwebtoken');
 
 jest.mock('fs');
+jest.mock('jsonwebtoken')
+
 
 describe('signin', () => {
     const mockUsers = [
         { id: 1, name: 'test1', email: 'test1@example.com', password: 'test', role: 'admin' }
-    ]
+    ];
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    })
 
     it('should return 200 and user info (id, email, name, token)', () => {
         const req = {
@@ -23,15 +30,14 @@ describe('signin', () => {
 
         fs.readFileSync.mockReturnValue(JSON.stringify(mockUsers));
         const user = mockUsers.find(user => user.email === req.body.email);
-        // console.log('user on ut:' + JSON.stringify(user));
+        const token = jwt.sign.mockReturnValue('jwttoken')
 
         const userLoginResponse = {
             id: user.id,
             email: user.email,
-            token: 'newToken'
+            token: 'jwttoken'
         }
-        console.log(userLoginResponse);
-
+    
         authController.signin(req, res);
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith({

@@ -1,10 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 const filePath = path.join(__dirname, './../data/users.json');
+const jwt = require('jsonwebtoken');
+const { secretKey } = require('./../config/config')
 
 exports.signin = function (req, res) {
     const loginRequest = req.body;
-
     let usersData = [];
 
     try {
@@ -17,26 +18,24 @@ exports.signin = function (req, res) {
         return;
     }
 
-
-    // console.log(data)
-
-
     const user = usersData.find(user => user.email === loginRequest.email && user.password === loginRequest.password);
-
-
-
     if (!user) {
         return res.status(401).json({
             success: false,
             error: 'Unauthorized'
         });
     }
-    console.log(user);
+
+    const token = jwt.sign(
+        {id: user.id, email: user.email, role: user.role},
+        secretKey,
+        {expiresIn:'1h'}
+    );
 
     const userLoginResponse = {
         id: user.id,
         email: user.email,
-        token: 'newToken'
+        token: token
     }
 
     return res.status(200).json({
