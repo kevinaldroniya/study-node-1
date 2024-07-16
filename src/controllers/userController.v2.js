@@ -85,7 +85,6 @@ exports.registerUser = function (req, res) {
             res.status(500).json({ error: 'Internal server error' });
         }
     }
-
 }
 
 exports.updateUser = function (req, res) {

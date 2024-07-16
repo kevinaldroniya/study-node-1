@@ -1,0 +1,10 @@
+[
+    {
+        "id": 1,
+        "role": "superadmin"
+    },
+    {
+        "id": 2,
+        "role": "admin"
+    }
+]
