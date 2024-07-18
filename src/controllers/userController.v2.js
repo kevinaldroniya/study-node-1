@@ -94,9 +94,6 @@ exports.updateUser = function (req, res) {
     const bodyKeys = Object.keys(req.body);
     const hasAllRequiredFields = requiredFields.every(field => bodyKeys.includes(field));
 
-    console.log(hasAllRequiredFields);
-    console.log(bodyKeys.length);
-
     if (!hasAllRequiredFields || bodyKeys.length !== 3) {
         res.status(400).json({ error: 'Invalid request' });
     }
