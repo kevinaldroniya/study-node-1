@@ -3,6 +3,7 @@ const path = require('path');
 const filePath = path.join(__dirname, './../data/roles.json');
 const usersFilePath = path.join(__dirname, './../data/users.json');
 const userController = require('./userController.v2')
+const roleService = require('./../services/roleService')
 
 exports.getAllRoles = (req, res) => {
     let rolesData;
@@ -14,10 +15,11 @@ exports.getAllRoles = (req, res) => {
     }
 
     try {
-        const data = fs.readFileSync(filePath, 'utf-8');
-        if (data) {
-            rolesData = JSON.parse(data);
-        }
+        rolesData = roleService.getAllUsers();
+        console.log({rolesData})
+        // if (data) {
+        //     rolesData = JSON.parse(data);
+        // }
     } catch (error) {
         return res.status(500).json({
             error: 'Internal server error'
@@ -36,26 +38,29 @@ exports.getRoleById = function (req, res) {
     const reqUserRole = req.role;
     const allowedRoles = ['superadmin', 'admin'];
 
+    console.log({reqId})
     if (!allowedRoles.includes(reqUserRole)) {
         return res.status(403);
     }
 
-    let roleData;
+    let role;
     try {
-        const data = fs.readFileSync(filePath, 'utf-8');
-        if (data) {
-            roleData = JSON.parse(data);
-        }
+        role = roleService.getRoleById(reqId);
+        console.log({role})
     } catch (error) {
-        return res.status(500)
-    }
-
-    const role = roleData.find(role => role.id === reqId);
-    if (!role) {
+        const e = error.message
+        console.log({e})
         return res.status(404).json({
             error: `role with given id: ${req.params.id}, is not found`
-        });
+        })
     }
+
+    // const role = roleData.find(role => role.id === reqId);
+    // if (!role) {
+    //     return res.status(404).json({
+    //         error: `role with given id: ${req.params.id}, is not found`
+    //     });
+    // }
 
     return res.status(200).json({
         success: true,
