@@ -1,8 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const filePath = path.join(__dirname, './../data/roles.json');
+const usersFilePath = path.join(__dirname, './../data/users.json');
+const userController = require('./userController.v2')
 
-exports.getAllRoles = function (req, res) {
+exports.getAllRoles = (req, res) => {
     let rolesData;
     const role = req.role;
     const allowedRoles = ['superadmin', 'admin'];
@@ -116,6 +118,16 @@ exports.updateRole = function (req, res) {
         return res.status(403);
     }
 
+    const requiredField = ['role'];
+    const reqBody = Object.keys(updateRole);
+    const hasAllRequiredFields = requiredField.every(field => reqBody.includes(requiredField));
+
+    if (!hasAllRequiredFields || reqBody.length != 1) {
+        return res.status(400).json({
+            error: 'Bad Request'
+        });
+    }
+
     let rolesData;
     const data = fs.readFileSync(filePath, 'utf-8');
     rolesData = JSON.parse(data);
@@ -173,3 +185,55 @@ exports.deleteRoleById = function (req, res) {
     fs.writeFileSync(filePath, rolesDataLeft, 'utf-8');
     return res.status(200);
 };
+
+exports.getUserRole = function (req, res) {
+    const paramUserId = Number(req.params.userId);
+
+    if (isNaN(paramUserId)) {
+        return res.status(400).json({
+            error: 'Bad Request'
+        });
+    }
+    const userRoleReq = req.role;
+    const allowedRoles = ['superadmin', 'admin'];
+
+    console.log(allowedRoles.includes(userRoleReq))
+    if (!allowedRoles.includes(userRoleReq)) {
+        return res.status(403);
+    }
+
+    let usersData;
+    try {
+        const data = fs.readFileSync(usersFilePath, 'utf-8');
+        usersData = JSON.parse(data);
+    } catch (error) {
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+
+    const user = usersData.find(user => user.id === paramUserId);
+
+    if (!user) {
+        return res.status(404).json({
+            error: `user with given id: ${paramUserId}, is not found`
+        });
+    }
+
+    const userRole = user.role;
+    return res.status(200).json({
+        role: userRole
+    });
+};
+
+exports.assignRoletoUser = async (req, res) => {
+    const paramUserId = Number(req.params.userId);
+    const getUserReq = {
+        params: { id: paramUserId }
+    }
+    const userResult = await userController.getUserById(getUserReq, res);
+
+    const status = userResult.res.status;
+
+    console.log({ status });
+}

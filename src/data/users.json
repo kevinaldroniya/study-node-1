@@ -4,14 +4,14 @@
     "name": "San Doe",
     "email": "san@example.com",
     "password": "test",
-    "role": "admin"
+    "role": "superadmin"
   },
   {
     "id": 2,
     "name": "Nam Doe",
     "email": "nam@example.com",
     "password": "test",
-    "role": "user"
+    "role": "admin"
   },
   {
     "id": 3,
