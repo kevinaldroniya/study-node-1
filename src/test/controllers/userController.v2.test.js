@@ -224,7 +224,7 @@ describe('updateUser', () => {
         expect(res.json).toHaveBeenCalledWith({ error: 'Internal server error' });
     });
 
-    it.only('should return 400 and invalid request', () => {
+    it('should return 400 and invalid request', () => {
         const req = {
             params: { id: 2 },
             body: {

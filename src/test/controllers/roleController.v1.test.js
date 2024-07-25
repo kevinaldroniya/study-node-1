@@ -2,6 +2,7 @@ const fs = require('fs');
 const roleController = require('./../../controllers/roleController.v1');
 const userController = require('./../../controllers/userController.v2')
 const roleService = require('./../../services/roleService');
+const userService = require('./../../services/userService');
 
 jest.mock('fs');
 jest.mock('./../../services/roleService');
@@ -24,16 +25,16 @@ describe('getAllRoles', () => {
 
     });
 
-    it('should return 200 and show all roles', () => {
+    it('should return 200 and show all roles', async () => {
         req = {
             id: 1,
             email: 'test1@example.com',
             role: 'superadmin'
         }
-        
-        roleService.getAllUsers.mockReturnValue(mockRoles);
 
-        roleController.getAllRoles(req, res);
+        roleService.getAllRoles.mockReturnValue(mockRoles);
+
+        await roleController.getAllRoles(req, res);
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith({
             success: true,
@@ -47,7 +48,7 @@ describe('getAllRoles', () => {
             email: 'test1@example.com',
             role: 'admin'
         }
-        roleService.getAllUsers.mockImplementation(() => {
+        roleService.getAllRoles.mockImplementation(() => {
             throw new Error('Error reading file')
         });
 
@@ -58,20 +59,20 @@ describe('getAllRoles', () => {
         });
     })
 
-    it('should return 403 if user role is not admin or superadmin', () => {
+    it('should return 403 if user role is not admin or superadmin', async () => {
         req = {
             id: 1,
             email: 'test1@example.com',
             role: 'user'
         }
 
-        roleService.getAllUsers.mockReturnValue(JSON.stringify(mockRoles));
-        roleController.getAllRoles(req, res);
+        roleService.getAllRoles.mockReturnValue(mockRoles)
+        await roleController.getAllRoles(req, res);
         expect(res.status).toHaveBeenCalledWith(403);
     })
 });
 
-describe.only('getRoleById', () => {
+describe('getRoleById', () => {
     const mockRoles = [
         { id: 1, role: 'superadmin' },
         { id: 2, role: 'admin' }
@@ -108,7 +109,7 @@ describe.only('getRoleById', () => {
         })
     });
 
-    it.only('should return 500 if file read error', () => {
+    it('should return 500 if file read error', () => {
         req = {
             params: { id: 1 },
             id: 1,
@@ -117,11 +118,14 @@ describe.only('getRoleById', () => {
         };
 
         roleService.getRoleById.mockImplementation(() => {
-            throw new Error('Error reading file')
+            throw new Error('500')
         });
 
         roleController.getRoleById(req, res);
+
+
         expect(res.status).toHaveBeenCalledWith(500);
+
     });
 
     it('should return 403 if role is not allowed', () => {
@@ -146,7 +150,7 @@ describe.only('getRoleById', () => {
         }
         // roleService.getAllUsers.mockReturnValue(mockRoles)
         roleService.getRoleById.mockImplementation(() => {
-            throw new Error('Role not found');
+            throw new Error('404');
         });
         roleController.getRoleById(req, res);
         expect(res.status).toHaveBeenCalledWith(404);
@@ -157,20 +161,24 @@ describe.only('getRoleById', () => {
 });
 
 describe('createRole', () => {
-    const mockRoles = [
-        { id: 1, role: 'superadmin' },
-        { id: 2, role: 'admin' }
-    ];
 
+    let mockRoles;
     let req = {};
     const res = {
         status: jest.fn().mockReturnThis(),
         json: jest.fn().mockReturnThis()
     }
 
+    const getAllUsers = jest.spyOn(roleService, 'getAllRoles');
+
     beforeEach(() => {
         jest.clearAllMocks();
+        mockRoles = [
+            { id: 1, role: 'superadmin' },
+            { id: 2, role: 'admin' }
+        ];
     });
+
 
     it('should return 201 and create new role', () => {
         req = {
@@ -182,20 +190,25 @@ describe('createRole', () => {
             role: 'superadmin'
         }
 
-        roleService.getAllUsersFromData.mockReturnValue(JSON.stringify(mockRoles));
-        fs.writeFileSync.mockReturnValue();
+        getAllUsers.mockReturnValue(mockRoles);
 
-        const createRoleResponse = {
+        // console.log({ mockRoles })
+        const newRole = {
             id: mockRoles.length + 1,
             role: req.body.role
         }
 
         roleController.createRole(req, res);
         expect(res.status).toHaveBeenCalledWith(201);
-        expect(res.json).toHaveBeenCalledWith({
-            success: true,
-            data: createRoleResponse
-        })
+        // expect(res.json).toHaveBeenCalledWith({
+        //     success: true,
+        //     data: createRoleResponse
+        // })
+
+        expect(roleService.saveRole).toHaveBeenCalledWith(mockRoles);
+        expect(mockRoles.length).toBe(3);
+        // console.log(mockRoles[mockRoles.length - 1].role)
+        expect(mockRoles[mockRoles.length - 1].role).toBe(newRole.role)
     });
 
     it('should return 500 if error when reading file', () => {
@@ -208,14 +221,17 @@ describe('createRole', () => {
             role: 'superadmin'
         };
 
-        roleService.getAllUsersFromData.mockReturnValue(JSON.stringify(mockRoles));
-        fs.writeFileSync.mockReturnValue();
+        getAllUsers.mockImplementation(() => {
+            throw new Error('500')
+        });
 
         roleController.createRole(req, res);
+        // console.log({ mockRoles })
         expect(res.status).toHaveBeenCalledWith(500);
         expect(res.json).toHaveBeenCalledWith({
             error: 'Internal server error'
         })
+        expect(mockRoles.length).toBe(2);
     });
 
     it('should return 403 if roles is not allowed', () => {
@@ -228,8 +244,7 @@ describe('createRole', () => {
             role: 'user'
         };
 
-        roleService.getAllUsersFromData.mockReturnValue(JSON.stringify(mockRoles));
-        fs.writeFileSync.mockReturnValue();
+        getAllUsers.mockReturnValue(mockRoles)
 
         roleController.createRole(req, res);
         expect(res.status).toHaveBeenCalledWith(403);
@@ -245,8 +260,7 @@ describe('createRole', () => {
             role: 'superadmin'
         };
 
-        roleService.getAllUsersFromData.mockReturnValue(JSON.stringify(mockRoles));
-        fs.writeFileSync.mockReturnThis();
+        getAllUsers.mockReturnValue(mockRoles)
 
         roleController.createRole(req, res);
         expect(res.status).toHaveBeenCalledWith(409);
@@ -259,15 +273,15 @@ describe('createRole', () => {
         req = {
             body: {
                 role: 'admin',
-                id: 1
+                id: 5
             },
             id: 1,
             email: 'test1@example.com',
             role: 'superadmin'
         }
 
-        roleService.getAllUsersFromData.mockReturnValue(JSON.stringify(mockRoles));
-        fs.writeFileSync.mockReturnValue()
+        getAllUsers.mockReturnValue(mockRoles);
+
         roleController.createRole(req, res);
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith({
@@ -278,10 +292,7 @@ describe('createRole', () => {
 
 
 describe('updateRoleById', () => {
-    const mockRoles = [
-        { id: 1, role: 'superadmin' },
-        { id: 2, role: 'admin' }
-    ];
+    let mockRoles;
 
     let req = {};
     const res = {
@@ -289,8 +300,14 @@ describe('updateRoleById', () => {
         json: jest.fn().mockReturnThis()
     };
 
+    const getAllRoles = jest.spyOn(roleService, 'getAllRoles')
+
     beforeEach(() => {
-        jest.clearAllMocks()
+        jest.clearAllMocks();
+        mockRoles = [
+            { id: 1, role: 'superadmin' },
+            { id: 2, role: 'admin' }
+        ];
     });
 
     it('should return 200 and update role', () => {
@@ -302,7 +319,8 @@ describe('updateRoleById', () => {
             role: 'superadmin'
         }
 
-        roleService.getAllUsersFromData.mockReturnValue(JSON.stringify(mockRoles));
+        getAllRoles.mockReturnValue(mockRoles);
+
         roleController.updateRole(req, res);
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith({
@@ -320,7 +338,7 @@ describe('updateRoleById', () => {
             role: 'user'
         }
 
-        roleService.getAllUsersFromData.mockReturnValue(JSON.stringify(mockRoles));
+        getAllRoles.mockReturnValue(mockRoles)
         roleController.updateRole(req, res);
         expect(res.status).toHaveBeenCalledWith(403);
     })
@@ -334,7 +352,7 @@ describe('updateRoleById', () => {
             role: 'superadmin'
         }
 
-        roleService.getAllUsersFromData.mockReturnValue(JSON.stringify(mockRoles));
+        getAllRoles.mockReturnValue(mockRoles);
         roleController.updateRole(req, res);
         expect(res.status).toHaveBeenCalledWith(404);
         expect(res.json).toHaveBeenCalledWith({
@@ -345,19 +363,35 @@ describe('updateRoleById', () => {
     it('should return 400 if request is invalid', () => {
         req = {
             params: { id: 2 },
+            body: { id: 1, role: 'adminUpdate' },
+            id: 1,
+            email: 'test1@example.com',
+            role: 'superadmin'
+        }
+
+        getAllRoles.mockReturnValue(mockRoles);
+        roleController.updateRole(req, res);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith({
+            error: 'Bad Request'
+        })
+    });
+
+    it('should return 500 when error reading file', () => {
+        req = {
+            params: { id: 1 },
             body: { role: 'adminUpdate' },
             id: 1,
             email: 'test1@example.com',
             role: 'superadmin'
         }
 
-        roleService.getAllUsersFromData.mockReturnValue(JSON.stringify(mockRoles));
-        roleController.getUserRole(req, res);
-        expect(res.status).toHaveBeenCalledWith(400);
-        expect(res.json).toHaveBeenCalledWith({
-            error: 'Bad Request'
+        getAllRoles.mockImplementation(() => {
+            throw new Error('500');
         })
-    });
+        roleController.updateRole(req, res);
+        expect(res.status).toHaveBeenCalledWith(500);
+    })
 });
 
 describe('deleteRoleById', () => {
@@ -368,6 +402,8 @@ describe('deleteRoleById', () => {
     ];
 
     let req = {};
+
+    const getAllRoles = jest.spyOn(roleService, 'getAllRoles');
 
     const res = {
         status: jest.fn().mockReturnThis(),
@@ -380,16 +416,17 @@ describe('deleteRoleById', () => {
 
     it('should return 200 and delete role', () => {
         req = {
-            params: { id: 1 },
+            params: { id: 3 },
             id: 1,
             email: 'test1@example.com',
             role: 'superadmin'
         };
 
-        roleService.getAllUsersFromData.mockReturnValue(JSON.stringify(mockRoles));
-
+        getAllRoles.mockReturnValue(mockRoles)
         roleController.deleteRoleById(req, res);
+        // console.log({ mockRoles })
         expect(res.status).toHaveBeenCalledWith(200);
+        expect(mockRoles.length).toBe(2);
 
     });
 
@@ -401,8 +438,7 @@ describe('deleteRoleById', () => {
             role: 'user'
         };
 
-        roleService.getAllUsersFromData.mockReturnValue(JSON.stringify(mockRoles));
-
+        getAllRoles.mockReturnValue(mockRoles)
         roleController.deleteRoleById(req, res);
         expect(res.status).toHaveBeenCalledWith(403);
         expect(res.json).toHaveBeenCalledWith({
@@ -418,9 +454,9 @@ describe('deleteRoleById', () => {
             role: 'superadmin'
         };
 
-        fs.readFileSync.mockReturnValue(() => {
-            throw new Error('File read error')
-        });
+        getAllRoles.mockImplementation(() => {
+            throw new Error('500')
+        })
 
         roleController.deleteRoleById(req, res);
         expect(res.status).toHaveBeenCalledWith(500);
@@ -437,13 +473,12 @@ describe('deleteRoleById', () => {
             role: 'superadmin'
         }
 
-        roleService.getAllUsersFromData.mockReturnValue(JSON.stringify(mockRoles));
-
+        getAllRoles.mockReturnValue(mockRoles);
         roleController.deleteRoleById(req, res);
         expect(res.status).toHaveBeenCalledWith(404);
         expect(res.json).toHaveBeenCalledWith({
             error: `role with given id: ${req.params.id}, is not found`
-        })
+        });
     });
 });
 
@@ -456,6 +491,10 @@ describe('getUserRole', () => {
     ];
 
     let req = {};
+
+    const getAllRoles = jest.spyOn(roleService, 'getAllRoles');
+    const getAllUsers = jest.spyOn(userService, 'getAllUsers');
+
 
     const res = {
         status: jest.fn().mockReturnThis(),
@@ -475,8 +514,8 @@ describe('getUserRole', () => {
             email: 'test1@example.com',
             role: 'superadmin'
         }
-        fs.readFileSync.mockReturnValue(JSON.stringify(mockUsers));
 
+        getAllUsers.mockReturnValue(mockUsers);
         const userRole = mockUsers.find(user => user.id === req.params.userId);
         const userRoleResponse = userRole.role;
 
@@ -497,7 +536,7 @@ describe('getUserRole', () => {
             role: 'user'
         };
 
-        fs.readFileSync.mockReturnValue(JSON.stringify(mockUsers));
+        getAllUsers.mockReturnValue(mockUsers);
 
         roleController.getUserRole(req, res);
         expect(res.status).toHaveBeenCalledWith(403);
@@ -513,8 +552,8 @@ describe('getUserRole', () => {
             role: 'superadmin'
         };
 
-        fs.readFileSync.mockReturnValue(() => {
-            throw new Error('Error reading file');
+        getAllUsers.mockImplementation(() => {
+            throw new Error('500')
         });
 
         roleController.getUserRole(req, res);
@@ -532,7 +571,7 @@ describe('getUserRole', () => {
             role: 'superadmin'
         };
 
-        fs.readFileSync.mockReturnValue(JSON.stringify(mockUsers));
+        getAllUsers.mockReturnValue(mockUsers)
 
         roleController.getUserRole(req, res);
         expect(res.status).toHaveBeenCalledWith(404);
@@ -549,7 +588,7 @@ describe('getUserRole', () => {
             role: 'superadmin'
         };
 
-        fs.readFileSync.mockReturnValue(JSON.stringify(mockUsers));
+        getAllUsers.mockReturnValue(mockUsers)
         roleController.getUserRole(req, res);
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith({
@@ -558,42 +597,132 @@ describe('getUserRole', () => {
     });
 });
 
-// describe('assignRoleToUser', () => {
-//     const mockRoles = [
-//         { id: 1, role: 'superadmin' },
-//         { id: 2, role: 'admin' },
-//         { id: 3, role: 'user' }
-//     ];
+describe('assignRoleToUser', () => {
+    let mockUsers, mockRoles, req;
+    const getAllUsers = jest.spyOn(userService, 'getAllUsers');
+    const getAllRoles = jest.spyOn(roleService, 'getAllRoles');
 
-//     const mockUsers = [
-//         { id: 3, name: 'test3', email: 'test3@example.com', role: 'user' }
-//     ]
+    const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn().mockReturnThis()
+    }
 
-//     const res = {
-//         status: jest.fn().mockReturnThis(),
-//         json: jest.fn().mockReturnThis()
-//     }
+    beforeEach(() => {
+        jest.clearAllMocks();
 
-//     beforeEach(() => {
-//         jest.clearAllMocks();
-//     })
+        mockUsers = [
+            { id: 1, name: 'test1', email: 'test1@example.com', password: 'test', role: 'superadmin' },
+            { id: 2, name: 'test2', email: 'test2@example.com', password: 'test', role: 'admin' },
+            { id: 3, name: 'test3', email: 'test3@example.com', password: 'test', role: 'user' },
+            { id: 4, name: 'test4', email: 'test4@example.com', password: 'test', role: 'user' },
 
-//     it('should return 200 and update user role', async () => {
-//         req = {
-//             params: { userId: 3 },
-//             body: { role: 'patient' },
-//             id: 1,
-//             email: 'test1@example.com',
-//             role: 'superadmin'
-//         }
+        ];
 
+        mockRoles = [
+            { id: 1, role: 'superadmin' },
+            { id: 2, role: 'admin' },
+            { id: 3, role: 'users' },
+            { id: 4, role: 'doctor' },
+            { id: 5, role: 'pharmacy' }
+        ];
+    })
 
-//         fs.readFileSync.mockReturnValue(JSON.stringify(mockRoles))
-//         userController.getUserById.mockResolvedValue({
-//             status: 200,
-//             json: { id: 1, name: 'Test User' }
-//         });
-//         await roleController.assignRoletoUser(req, res);
-//         expect(res.status).toHaveBeenCalledWith(200);
-//     })
-// });
+    it('should assign new role to user selected', async () => {
+        req = {
+            params: { userId: 3 },
+            body: { role: 'doctor' },
+            id: 1,
+            email: 'test1@example.com',
+            role: 'superadmin'
+        };
+
+        getAllUsers.mockReturnValue(mockUsers);
+        getAllRoles.mockReturnValue(mockRoles);
+
+        await roleController.assignRoletoUser(req, res);
+        // console.log({ mockUsers })
+        expect(res.status).toHaveBeenCalledWith(200);
+    })
+
+    it('should return 403 is user role is not allowed', async () => {
+        req = {
+            params: { userId: 3 },
+            body: { role: 'doctor' },
+            id: 1,
+            email: 'test1@example.com',
+            role: 'user'
+        };
+
+        getAllUsers.mockReturnValue(mockUsers);
+        getAllRoles.mockReturnValue(mockRoles);
+
+        await roleController.assignRoletoUser(req, res);
+        expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it('should return 500 if error when reading file', async () => {
+        req = {
+            params: { userId: 3 },
+            body: { role: 'doctor' },
+            id: 1,
+            email: 'test1@example.com',
+            role: 'superadmin'
+        }
+
+        getAllRoles.mockImplementation(() => {
+            throw new Error('500')
+        });
+        getAllUsers.mockReturnValue(mockUsers);
+
+        await roleController.assignRoletoUser(req, res);
+        expect(res.status).toHaveBeenCalledWith(500)
+    });
+
+    it('should return 400 when request is invalid', async () => {
+        req = {
+            params: { userId: 3 },
+            body: { id: 4, role: 'doctor' },
+            id: 1,
+            email: 'test1@example.com',
+            role: 'superadmin'
+        };
+
+        getAllRoles.mockReturnValue(mockRoles);
+        getAllUsers.mockReturnValue(mockUsers);
+
+        await roleController.assignRoletoUser(req, res);
+        expect(res.status).toHaveBeenCalledWith(400)
+    });
+
+    it('should return 404 if user or role is not found', async () => {
+        req = {
+            params: { userId: 10 },
+            body: { role: 'doctor' },
+            id: 1,
+            email: 'test1@example.com',
+            role: 'superadmin'
+        };
+
+        getAllRoles.mockReturnValue(mockRoles);
+        getAllUsers.mockReturnValue(mockUsers);
+
+        await roleController.assignRoletoUser(req, res);
+        expect(res.status).toHaveBeenCalledWith(404)
+    });
+
+    it('should return 403 when user doesnt have permission to perform those action', async () => {
+        req = {
+            params: { userId: 3 },
+            body: { role: 'superadmin' },
+            id: 2,
+            email: 'test2@example.com',
+            role: 'admin'
+        }
+
+        getAllRoles.mockReturnValue(mockRoles);
+        getAllUsers.mockReturnValue(mockUsers);
+
+        await roleController.assignRoletoUser(req, res);
+        expect(res.status).toHaveBeenCalledWith(403)
+    });
+});

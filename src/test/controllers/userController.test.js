@@ -205,7 +205,7 @@ describe('updateUser', () => {
         fs.readFileSync.mockReturnValue(JSON.stringify(mockUsers));
         fs.writeFileSync.mockImplementation((path, data) => {
             const userAfterUpdate = JSON.parse(data);
-            console.log('userAfterUpdate: \n', userAfterUpdate);
+            // console.log('userAfterUpdate: \n', userAfterUpdate);
         });
 
         userController.updateUser(req, res);
